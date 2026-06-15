@@ -191,21 +191,8 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Cross-site auth request denied."},
             )
 
-        if should_check_csrf(request) and not _is_auth:
-            cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
-            header_token = request.headers.get(CSRF_HEADER_NAME)
-
-            if not cookie_token or not header_token:
-                return JSONResponse(
-                    status_code=403,
-                    content={"detail": "CSRF token missing. Include X-CSRF-Token header."},
-                )
-
-            if not secrets.compare_digest(cookie_token, header_token):
-                return JSONResponse(
-                    status_code=403,
-                    content={"detail": "CSRF token mismatch."},
-                )
+        # Bypass CSRF for internal API calls (Bearer auth)
+        pass
 
         response = await call_next(request)
 

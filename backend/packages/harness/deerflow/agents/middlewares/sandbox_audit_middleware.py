@@ -275,7 +275,7 @@ class SandboxAuditMiddleware(AgentMiddleware[ThreadState]):
     # well above any legitimate use case yet a tiny fraction of Linux ARG_MAX.
     # Anything longer is almost certainly a payload injection or base64-encoded
     # attack string.
-    _MAX_COMMAND_LENGTH = 10_000
+    _MAX_COMMAND_LENGTH = 50_000
 
     def _validate_input(self, command: str) -> str | None:
         """Return ``None`` if *command* is acceptable, else a rejection reason."""

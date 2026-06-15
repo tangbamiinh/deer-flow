@@ -1863,3 +1863,83 @@ async def _str_replace_tool_async(
 
 
 str_replace_tool.coroutine = _str_replace_tool_async
+
+# ------------------------------------------------------------------
+# upload_file_tool — upload sandbox files to user cloud storage
+# ------------------------------------------------------------------
+
+@tool("upload_file", parse_docstring=True)
+def upload_file_tool(
+    runtime: Runtime,
+    description: str,
+    path: str,
+) -> str:
+    """Upload a file from the sandbox to the user's cloud storage.
+
+    Use this tool after generating any file (teaching design .docx,
+    PowerPoint .pptx, etc.) so the teacher can download it from the
+    cloud storage page. Files not uploaded will be lost when the
+    sandbox session ends.
+
+    Args:
+        description: Brief description of what the file contains. ALWAYS PROVIDE THIS PARAMETER FIRST.
+        path: The **absolute** path to the file in the sandbox. ALWAYS PROVIDE THIS PARAMETER SECOND.
+
+    Returns:
+        Success message or error details.
+    """
+    try:
+        import os
+        import urllib.request
+        import urllib.parse
+        import uuid
+
+        # Resolve thread_id and user_id from runtime context
+        thread_id = (runtime.context or {}).get("thread_id", "")
+        user_id = (runtime.context or {}).get("user_id", "")
+        if not thread_id:
+            runtime_config = getattr(runtime, "config", None) or {}
+            thread_id = runtime_config.get("configurable", {}).get("thread_id", "")
+        if not user_id:
+            from deerflow.runtime.user_context import get_effective_user_id
+            user_id = get_effective_user_id()
+
+        backend_url = os.environ.get("BACKEND_API_URL", "http://zhiheng-backend:8000")
+
+        if not user_id or not thread_id:
+            return "Error: USER_ID or THREAD_ID not set. Cannot upload file."
+
+        # Resolve sandbox virtual path to host-side DeerFlow path (same as present_file_tool)
+        from deerflow.config.paths import get_paths
+        actual_path = get_paths().resolve_virtual_path(thread_id, path, user_id=user_id)
+
+        if not os.path.isfile(actual_path):
+            return f"Error: File not found: {path} (resolved: {actual_path})"
+
+        # Build multipart form data manually (no httpx dependency)
+        boundary = f"----WebKitFormBoundary{uuid.uuid4().hex[:16]}"
+        filename = os.path.basename(actual_path)
+
+        body = (
+            f"--{boundary}\r\n"
+            f"Content-Disposition: form-data; name=\"file\"; filename=\"{filename}\"\r\n"
+            f"Content-Type: application/octet-stream\r\n\r\n"
+        ).encode("utf-8")
+        body += open(actual_path, "rb").read()
+        body += f"\r\n--{boundary}--\r\n".encode("utf-8")
+
+        url = f"{backend_url}/upload/sandbox?user_id={urllib.parse.quote(user_id)}&thread_id={urllib.parse.quote(thread_id)}"
+
+        req = urllib.request.Request(url, data=body, method="POST")
+        req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
+
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return f"File uploaded successfully: {filename}"
+        except urllib.error.HTTPError as e:
+            return f"Upload failed (HTTP {e.code}): {e.read().decode(errors='replace')[:200]}"
+        except Exception as e:
+            return f"Upload error: {str(e)}"
+
+    except Exception as e:
+        return f"Error: {str(e)}"
