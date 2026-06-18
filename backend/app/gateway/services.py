@@ -135,6 +135,8 @@ _CONTEXT_CONFIGURABLE_KEYS: frozenset[str] = frozenset(
         "max_concurrent_subagents",
         "agent_name",
         "is_bootstrap",
+        "user_jwt",
+        "zhiheng_thread_id",
     }
 )
 
@@ -163,6 +165,10 @@ def merge_run_context_overrides(config: dict[str, Any], context: Mapping[str, An
                 runtime_context.setdefault(key, context[key])
     if "user_id" in context and isinstance(runtime_context, dict):
         runtime_context.setdefault("user_id", context["user_id"])
+    if "user_jwt" in context and isinstance(runtime_context, dict):
+        runtime_context.setdefault("user_jwt", context["user_jwt"])
+    if "zhiheng_thread_id" in context and isinstance(runtime_context, dict):
+        runtime_context.setdefault("zhiheng_thread_id", context["zhiheng_thread_id"])
 
 
 def inject_authenticated_user_context(config: dict[str, Any], request: Request) -> None:

@@ -20,10 +20,11 @@ from langchain.agents.middleware import AgentMiddleware
 
 from deerflow.agents.features import RuntimeFeatures
 from deerflow.agents.middlewares.clarification_middleware import ClarificationMiddleware
+from deerflow.agents.middlewares.present_manifest_middleware import PresentManifestMiddleware
 from deerflow.agents.middlewares.dangling_tool_call_middleware import DanglingToolCallMiddleware
 from deerflow.agents.middlewares.tool_error_handling_middleware import ToolErrorHandlingMiddleware
 from deerflow.agents.thread_state import ThreadState
-from deerflow.tools.builtins import ask_clarification_tool
+from deerflow.tools.builtins import ask_clarification_tool, present_manifest_tool
 
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
@@ -282,7 +283,11 @@ def _assemble_from_features(
 
             chain.append(LoopDetectionMiddleware.from_config(LoopDetectionConfig()))
 
-    # --- [13] Clarification (always last among built-ins) ---
+    # --- [13] PresentManifest (before Clarification) ---
+    chain.append(PresentManifestMiddleware())
+    extra_tools.append(present_manifest_tool)
+
+    # --- [14] Clarification (always last among built-ins) ---
     chain.append(ClarificationMiddleware())
     extra_tools.append(ask_clarification_tool)
 
