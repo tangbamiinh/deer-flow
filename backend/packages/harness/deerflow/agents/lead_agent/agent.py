@@ -37,6 +37,7 @@ from deerflow.agents.middlewares.summarization_middleware import BeforeSummariza
 from deerflow.agents.middlewares.title_middleware import TitleMiddleware
 from deerflow.agents.middlewares.todo_middleware import TodoMiddleware
 from deerflow.agents.middlewares.token_usage_middleware import TokenUsageMiddleware
+from deerflow.agents.middlewares.reasoning_log_middleware import ReasoningLogMiddleware
 from deerflow.agents.middlewares.tool_error_handling_middleware import build_lead_runtime_middlewares
 from deerflow.agents.middlewares.view_image_middleware import ViewImageMiddleware
 from deerflow.agents.thread_state import ThreadState
@@ -327,6 +328,9 @@ def build_middlewares(
     # Add TokenUsageMiddleware when token_usage tracking is enabled
     if resolved_app_config.token_usage.enabled:
         middlewares.append(TokenUsageMiddleware())
+
+    # ReasoningLogMiddleware — structured logging of thinking + tool calls + run summary
+    middlewares.append(ReasoningLogMiddleware())
 
     # Add TitleMiddleware
     middlewares.append(TitleMiddleware(app_config=resolved_app_config))
