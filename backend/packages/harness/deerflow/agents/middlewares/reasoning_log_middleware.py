@@ -124,7 +124,18 @@ class ReasoningLogMiddleware(AgentMiddleware):
 
     def _model_name(self, runtime: Runtime) -> str:
         ctx = runtime.context or {}
-        return str(ctx.get("model_name", "unknown"))
+        for key in ("model_name", "model", "agent_model_name"):
+            if ctx.get(key):
+                return str(ctx[key])
+        # Try metadata
+        for meta_key in ("metadata.model_name", "metadata.model"):
+            parts = meta_key.split(".")
+            obj = runtime.metadata or {}
+            for p in parts:
+                obj = obj.get(p, {}) if isinstance(obj, dict) else {}
+            if obj:
+                return str(obj)
+        return "unknown"
 
     def _after_model(self, state: AgentState, runtime: Runtime) -> dict | None:
         key = self._key(runtime)
