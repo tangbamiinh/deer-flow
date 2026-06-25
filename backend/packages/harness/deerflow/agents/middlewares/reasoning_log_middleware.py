@@ -127,14 +127,12 @@ class ReasoningLogMiddleware(AgentMiddleware):
         for key in ("model_name", "model", "agent_model_name"):
             if ctx.get(key):
                 return str(ctx[key])
-        # Try metadata
-        for meta_key in ("metadata.model_name", "metadata.model"):
-            parts = meta_key.split(".")
-            obj = runtime.metadata or {}
-            for p in parts:
-                obj = obj.get(p, {}) if isinstance(obj, dict) else {}
-            if obj:
-                return str(obj)
+        # Try nested metadata in context
+        meta = ctx.get("metadata") or {}
+        if isinstance(meta, dict):
+            for key in ("model_name", "model"):
+                if meta.get(key):
+                    return str(meta[key])
         return "unknown"
 
     def _after_model(self, state: AgentState, runtime: Runtime) -> dict | None:
